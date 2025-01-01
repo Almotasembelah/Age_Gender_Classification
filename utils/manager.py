@@ -136,7 +136,7 @@ class ModelManager:
             else:
                 y = y.to(self.device)
                 if isinstance(self._loss_fn, nn.BCELoss) or isinstance(self._loss_fn, nn.BCEWithLogitsLoss):
-                    loss = self._loss_fn(y_pred, y)
+                    loss = self._loss_fn(y_pred.squeeze(1), y)
                 else:
                     loss = self._loss_fn(y_pred, y)
             acc = self._accuracy(x, y)

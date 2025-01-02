@@ -71,8 +71,7 @@ class EfficientNetB0(nn.Module):
             for param in self.model.parameters():
                 param.requires_grad = False
 
-        in_features = self.model.classifier.in_features
-        self.model.avgpool = nn.Sequential(nn.Conv2d(in_features, out_channels, 3, 1, 1),
+        self.model.avgpool = nn.Sequential(nn.Conv2d(1280, out_channels, 3, 1, 1),
                                            nn.BatchNorm2d(out_channels),
                                            nn.ReLU(),
                                            nn.AdaptiveAvgPool2d(1))

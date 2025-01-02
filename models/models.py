@@ -19,13 +19,13 @@ class Classifier(nn.Module):
                                         nn.ReLU(),
                                         nn.Linear(512, 2))  
 
-        self.fc_age = nn.Sequential(nn.Linear(in_features, 512),    
+        self.fc_age = nn.Sequential(nn.Linear(in_features, 1024),    
                                     nn.ReLU(),
-                                    nn.Linear(512, 9))
+                                    nn.Linear(1024, 9))
 
-        self.fc_race = nn.Sequential(nn.Linear(in_features, 512),
+        self.fc_race = nn.Sequential(nn.Linear(in_features, 1024),
                                      nn.ReLU(),
-                                     nn.Linear(512, 7))
+                                     nn.Linear(1024, 7))
     def forward(self, x):
         if self.task == Task.GENDER:
             return self.fc_gender(x)

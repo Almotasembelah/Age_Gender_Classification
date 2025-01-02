@@ -53,7 +53,7 @@ class ResNet18(nn.Module):
                 param.requires_grad = False
 
         in_features = self.model.fc.in_features
-        self.model.avgpool = nn.Sequential(nn.Convd2d(in_features, out_channels, 3, 1, 1),
+        self.model.avgpool = nn.Sequential(nn.Conv2d(in_features, out_channels, 3, 1, 1),
                                            nn.BatchNorm2d(out_channels),  
                                            nn.ReLU(),
                                            nn.AdaptiveAvgPool2d(1))

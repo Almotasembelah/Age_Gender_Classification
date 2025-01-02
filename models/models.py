@@ -65,7 +65,7 @@ class ResNet18(nn.Module):
 class EfficientNetB0(nn.Module):
     def __init__(self, out_channels, task, freeze=True):
         super(EfficientNetB0, self).__init__()
-        self.model = models.efficientnet_b0(weights=models.EfficientNetB0_Weights.DEFAULT)
+        self.model = models.efficientnet_b0(weights=models.efficientnet_b0_Weights.DEFAULT)
 
         if freeze:
             for param in self.model.parameters():

@@ -83,6 +83,8 @@ class ModelManager:
                     y[i] = y[i].to(self.device)
                     if isinstance(loss_fn, nn.BCELoss) or isinstance(loss_fn, nn.BCEWithLogitsLoss):
                         temp_loss = loss_fn(y_pred[i].squeeze(1), y[i])
+                    elif isinstance(self._loss_fn, nn.L1Loss) or isinstance(self._loss_fn, nn.MSELoss):
+                        temp_loss = self._loss_fn(y_pred.squeeze(), y)
                     else:
                         temp_loss = loss_fn(y_pred[i], y[i])
                     losses.append(temp_loss.item())
@@ -91,6 +93,8 @@ class ModelManager:
                 y = y.to(self.device)
                 if isinstance(self._loss_fn, nn.BCELoss) or isinstance(self._loss_fn, nn.BCEWithLogitsLoss):
                     loss = self._loss_fn(y_pred, y.unsqueeze(1))
+                elif isinstance(self._loss_fn, nn.L1Loss) or isinstance(self._loss_fn, nn.MSELoss):
+                    loss = self._loss_fn(y_pred.squeeze(), y)
                 else:
                     loss = self._loss_fn(y_pred, y)
 
@@ -129,6 +133,8 @@ class ModelManager:
                     y[i] = y[i].to(self.device)
                     if isinstance(loss_fn, nn.BCELoss) or isinstance(loss_fn, nn.BCEWithLogitsLoss):
                         temp_loss = loss_fn(y_pred[i].squeeze(1), y[i])
+                    elif isinstance(self._loss_fn, nn.L1Loss) or isinstance(self._loss_fn, nn.MSELoss):
+                        temp_loss = self._loss_fn(y_pred.squeeze(), y)
                     else:
                         temp_loss = loss_fn(y_pred[i], y[i])
                     losses.append(temp_loss.item())
@@ -137,6 +143,8 @@ class ModelManager:
                 y = y.to(self.device)
                 if isinstance(self._loss_fn, nn.BCELoss) or isinstance(self._loss_fn, nn.BCEWithLogitsLoss):
                     loss = self._loss_fn(y_pred.squeeze(1), y)
+                elif isinstance(self._loss_fn, nn.L1Loss) or isinstance(self._loss_fn, nn.MSELoss):
+                    loss = self._loss_fn(y_pred.squeeze(), y)
                 else:
                     loss = self._loss_fn(y_pred, y)
             acc = self._accuracy(x, y)

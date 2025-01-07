@@ -405,7 +405,7 @@ class ModelManager:
             for i in range(len(y_pred)):
                 y[i] = y[i].to(self.device)
                 if isinstance(self._loss_fn[i], nn.BCELoss) or isinstance(self._loss_fn[i], nn.BCEWithLogitsLoss):
-                    acc.append(multi_class(y_pred[i], y[i]))
+                    acc.append(binary_class(y_pred[i], y[i]))
                 else:
                     acc.append(multi_class(y_pred[i], y[i]))
         else:
@@ -701,7 +701,7 @@ class ModelManagerV2(ModelManager):
                 acc.append(binary_class(y_pred[i], y[i]))
             else:
                 acc.append(multi_class(torch.argmax(y_pred[i],dim=1), y[i]))
-                
+
         del y, x, y_pred
         return acc
 

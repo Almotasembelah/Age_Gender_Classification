@@ -17,7 +17,7 @@ class Classifier(nn.Module):
         self.task = task
         self.fc_gender = nn.Sequential(nn.Linear(in_features, 512),
                                         nn.ReLU(),
-                                        nn.Linear(512, 2))  
+                                        nn.Linear(512, 1))  
 
         self.fc_age = nn.Sequential(nn.Linear(in_features, 1024),    
                                     nn.ReLU(),
@@ -48,15 +48,18 @@ class ResNet18(nn.Module):
         super(ResNet18, self).__init__()
         self.model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
 
+        in_features = self.model.fc.in_features
         if freeze:
             for param in self.model.parameters():
                 param.requires_grad = False
 
-        in_features = self.model.fc.in_features
-        self.model.avgpool = nn.Sequential(nn.Conv2d(in_features, out_channels, 3, 1, 1),
-                                           nn.BatchNorm2d(out_channels),  
-                                           nn.ReLU(),
-                                           nn.AdaptiveAvgPool2d(1))
+            self.model.avgpool = nn.Sequential(nn.Conv2d(in_features, out_channels, 3, 1, 1),
+                                            nn.BatchNorm2d(out_channels),  
+                                            nn.ReLU(),
+                                            nn.AdaptiveAvgPool2d(1))
+        else:
+            out_channels = in_features
+            
         self.model.fc = Classifier(out_channels, task)
 
     def forward(self, x):
@@ -70,11 +73,13 @@ class EfficientNetB0(nn.Module):
         if freeze:
             for param in self.model.parameters():
                 param.requires_grad = False
-
-        self.model.avgpool = nn.Sequential(nn.Conv2d(1280, out_channels, 3, 1, 1),
-                                           nn.BatchNorm2d(out_channels),
-                                           nn.ReLU(),
-                                           nn.AdaptiveAvgPool2d(1))
+                
+            self.model.avgpool = nn.Sequential(nn.Conv2d(1280, out_channels, 3, 1, 1),
+                                            nn.BatchNorm2d(out_channels),
+                                            nn.ReLU(),
+                                            nn.AdaptiveAvgPool2d(1))
+        else:
+            out_channels = 1280
         self.model.classifier = Classifier(out_channels, task)
 
     def forward(self, x):

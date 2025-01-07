@@ -527,19 +527,19 @@ class ModelManager:
                 if self.multi_task:
                     # Handle multi-task predictions
                     for i, pred in enumerate(outputs):
-                        if pred.size(1) > 2:  # Multi-class classification
-                            pred_labels = pred.argmax(dim=1).cpu().numpy()
-                        else:  # Binary classification
+                        if isinstance(self._loss_fn[i], nn.BCELoss) or isinstance(self._loss_fn[i], nn.BCEWithLogitsLoss):  # Binary classification
                             pred_labels = (pred > 0.5).float().cpu().numpy()
+                        else:  # Multi-class classification
+                            pred_labels = pred.argmax(dim=1).cpu().numpy()
 
                         y_pred[i].extend(pred_labels)
                         y_true[i].extend(y[i].cpu().numpy())
                 else:
                     # Handle single-task predictions
-                    if outputs.size(1) > 2:  # Multi-class classification
-                        pred_labels = outputs.argmax(dim=1).cpu().numpy()
-                    else:  # Binary classification
+                    if isinstance(self._loss_fn, nn.BCELoss) or isinstance(self._loss_fn, nn.BCEWithLogitsLoss):
                         pred_labels = (outputs > 0.5).float().cpu().numpy()
+                    else:  # Multi-class classification
+                        pred_labels = outputs.argmax(dim=1).cpu().numpy()
 
                     y_pred.extend(pred_labels)
                     y_true.extend(y.cpu().numpy())
@@ -579,3 +579,195 @@ class ModelManager:
 
         if report:
             print(classification_report(y_true, y_pred, target_names=class_labels))
+
+
+class ModelManagerV2(ModelManager):   
+    def _train_step_fn(self):
+        def _step(x, y):
+            self.model.train()
+
+            x = x.to(self.device)
+            y_pred = self.model(x)
+            y_pred = y_pred.squeeze()
+            gen_pred = y_pred[:,0]
+            age_pred = y_pred[:,1:10]
+            race_pred = y_pred[:, 10:]
+            y_pred = [gen_pred, age_pred, race_pred]
+            
+            loss = 0
+            if self.multi_task:
+                losses = []
+                for i, loss_fn in enumerate(self._loss_fn):
+                    y[i] = y[i].to(self.device)
+                    if isinstance(loss_fn, nn.BCELoss) or isinstance(loss_fn, nn.BCEWithLogitsLoss):
+                        temp_loss = loss_fn(y_pred[i], y[i])
+                    elif isinstance(self._loss_fn, nn.L1Loss) or isinstance(self._loss_fn, nn.MSELoss):
+                        temp_loss = self._loss_fn(y_pred, y)
+                    else:
+                        temp_loss = loss_fn(y_pred[i], y[i])
+                    losses.append(temp_loss.item())
+                    loss += temp_loss
+            else:
+                y = y.to(self.device)
+                if isinstance(self._loss_fn, nn.BCELoss) or isinstance(self._loss_fn, nn.BCEWithLogitsLoss):
+                    loss = self._loss_fn(y_pred, y)
+                elif isinstance(self._loss_fn, nn.L1Loss) or isinstance(self._loss_fn, nn.MSELoss):
+                    loss = self._loss_fn(y_pred, y)
+                else:
+                    loss = self._loss_fn(y_pred, y)
+
+            loss.backward()
+            self._optimizer.step()
+            self._optimizer.zero_grad()
+
+            if self._BATCH_SCHEDULER:
+                self._lr_scheduler.step()
+
+            acc = self._accuracy(x, y)
+
+            del x, y, y_pred
+            if self.multi_task:
+                return loss.item(), *losses, *acc
+            else:
+                return loss.item(), acc
+        return _step
+
+    def _val_step_fn(self):
+        def _step(x, y):
+            self.model.eval()
+            x = x.to(self.device)
+            y_pred = self.model(x)
+            y_pred = y_pred.squeeze()
+            gen_pred = y_pred[:,0]
+            age_pred = y_pred[:,1:10]
+            race_pred = y_pred[:, 10:]
+            y_pred = [gen_pred, age_pred, race_pred]
+            loss = 0
+            if self.multi_task:
+                losses = []
+                for i, loss_fn in enumerate(self._loss_fn):
+                    y[i] = y[i].to(self.device)
+                    if isinstance(loss_fn, nn.BCELoss) or isinstance(loss_fn, nn.BCEWithLogitsLoss):
+                        temp_loss = loss_fn(y_pred[i], y[i])
+                    elif isinstance(self._loss_fn, nn.L1Loss) or isinstance(self._loss_fn, nn.MSELoss):
+                        temp_loss = self._loss_fn(y_pred, y)
+                    else:
+                        temp_loss = loss_fn(y_pred[i], y[i])
+                    losses.append(temp_loss.item())
+                    loss += temp_loss
+            else:
+                y = y.to(self.device)
+                if isinstance(self._loss_fn, nn.BCELoss) or isinstance(self._loss_fn, nn.BCEWithLogitsLoss):
+                    loss = self._loss_fn(y_pred.squeeze(1), y)
+                elif isinstance(self._loss_fn, nn.L1Loss) or isinstance(self._loss_fn, nn.MSELoss):
+                    loss = self._loss_fn(y_pred.squeeze(), y)
+                else:
+                    loss = self._loss_fn(y_pred, y)
+            acc = self._accuracy(x, y)
+
+            del y, x, y_pred
+
+            if self.multi_task:
+                return loss.item(), *losses, *acc
+            else:
+                return loss.item(), acc
+        return _step
+
+    @torch.no_grad()
+    def _accuracy(self, x, y):    
+        def binary_class(pred, target):
+            pred = (pred > 0.5).squeeze()
+            is_correct = (pred == target).sum().item()
+            acc = (is_correct / len(target)) * 100
+            return acc
+            
+        def multi_class(pred, target):
+            is_correct = (pred==target).sum().item()
+            acc = is_correct / target.size(0) *100
+            return acc
+               
+        self.model.eval()
+        y_pred = self.model(x.to(self.device))
+        y_pred = y_pred.squeeze()
+        gen_pred = y_pred[:,0]
+        age_pred = y_pred[:,1:10]
+        race_pred = y_pred[:, 10:]
+        y_pred = [gen_pred, age_pred, race_pred]
+
+        acc = []
+        for i in range(len(y_pred)):
+            y[i] = y[i].to(self.device)
+            if isinstance(self._loss_fn[i], nn.BCELoss) or isinstance(self._loss_fn[i], nn.BCEWithLogitsLoss):
+                acc.append(binary_class(y_pred[i], y[i]))
+            else:
+                acc.append(multi_class(torch.argmax(y_pred[i],dim=1), y[i]))
+                
+        del y, x, y_pred
+        return acc
+
+    def conf_mat_class_report(self, classes, validation=False, report=False):
+        torch.manual_seed(42)
+    
+        # Load the appropriate checkpoint
+        checkpoint_name = 'best' if self._filename is None else f'best_{self._filename}'
+        try:
+            self.load_checkpoint(checkpoint_name)
+        except Exception as e:
+            print(f"Error loading checkpoint: {e}")
+            print('The current model with his parameters will be used')
+    
+        # Prepare data containers
+        if self.multi_task:
+            y_pred = [[] for _ in range(len(self.names))]
+            y_true = [[] for _ in range(len(self.names))]
+        else:
+            y_pred = []
+            y_true = []
+    
+        # Select the appropriate dataloader
+        dataloader = self._val_data if validation else self._train_data
+    
+        # Disable gradient calculations for inference
+        with torch.inference_mode():
+            self.model.eval()
+            for x, y in tqdm(dataloader):
+                x = x.to(self.device)
+    
+                # Forward pass
+                outputs = self.model(x)
+                outputs = outputs.squeeze()
+                gen_pred = outputs[:,0]
+                age_pred = outputs[:,1:10]
+                race_pred = outputs[:, 10:]
+                outputs = [gen_pred, age_pred, race_pred]
+                
+                if self.multi_task:
+                    # Handle multi-task predictions
+                    for i, pred in enumerate(outputs):
+                        if pred.size(1) > 2:  # Multi-class classification
+                            pred_labels = pred.argmax(dim=1).cpu().numpy()
+                        else:  # Binary classification
+                            pred_labels = (pred > 0.5).float().cpu().numpy()
+    
+                        y_pred[i].extend(pred_labels)
+                        y_true[i].extend(y[i].cpu().numpy())
+                else:
+                    # Handle single-task predictions
+                    if outputs.size(1) > 2:  # Multi-class classification
+                        pred_labels = outputs.argmax(dim=1).cpu().numpy()
+                    else:  # Binary classification
+                        pred_labels = (outputs > 0.5).float().cpu().numpy()
+    
+                    y_pred.extend(pred_labels)
+                    y_true.extend(y.cpu().numpy())
+                    
+                del x, y
+        # Restore the model to training mode
+        self.model.train()
+    
+        # Visualization and reports
+        if self.multi_task:
+            for i, (true_labels, pred_labels) in enumerate(zip(y_true, y_pred)):
+                self._plot_confusion_matrix(true_labels, pred_labels, classes[i], report)
+        else:
+            self._plot_confusion_matrix(y_true, y_pred, classes, report)

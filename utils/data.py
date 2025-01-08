@@ -41,7 +41,7 @@ class FairFaceDataset(Dataset):
 
     def __getitem__(self, idx):
         item = self.df.iloc[idx].squeeze()
-        img = Image.open(self.root + item['file']) if root else Image.open(item['file'])/255.
+        img = Image.open(self.root + item['file']) if self.root is not None else Image.open(item['file'])/255.
         if self.transform:
             img = self.transform(img)
 

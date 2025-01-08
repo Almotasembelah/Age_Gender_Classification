@@ -20,17 +20,31 @@ class FairFaceDataset(Dataset):
 
         self.classes = []
         if self.gender:
-            self.gender_labels = {class_name: torch.tensor(i).float()  for i, class_name in enumerate(df['gender'].value_counts().index.values)}
+            self.gender_labels = {'Male': torch.tensor(0).float(), 'Female':torch.tensor(1).float()}
             self.gender_classes = list(self.gender_labels.keys())
             self.classes.append(self.gender_classes)
             
         if self.age:
-            self.age_labels = {class_name: torch.tensor(i)  for i, class_name in enumerate(df['age'].value_counts().index.values)}
+            self.age_labels = {'0-2': torch.tensor(0), 
+                              '3-9': torch.tensor(1),
+                              '10-19': torch.tensor(2),
+                              '20-29': torch.tensor(3),
+                              '30-39': torch.tensor(4),
+                              '40-49': torch.tensor(5),
+                              '50-59': torch.tensor(6),
+                              '60-69': torch.tensor(7),
+                              'more than 70': torch.tensor(8)}
             self.age_classes = list(self.age_labels.keys())
             self.classes.append(self.age_classes)
             
         if self.race:
-            self.race_labels = {class_name: torch.tensor(i)  for i, class_name in enumerate(df['race'].value_counts().index.values)}
+            self.race_labels =  {'White': torch.tensor(0), 
+                              'Latino_Hispanic': torch.tensor(1),
+                              'Black': torch.tensor(2),
+                              'East Asian': torch.tensor(3),
+                              'Indian': torch.tensor(4),
+                              'Southeast Asian': torch.tensor(5),
+                              'Middle Eastern': torch.tensor(6)}
             self.race_classes = list(self.race_labels.keys())
             self.classes.append(self.race_classes)
 
@@ -90,6 +104,7 @@ def normalize(dataloader):
 def printNetResults(model, img, gender_mapping, age_mapping, race_mapping, mode=0):
     img = img.unsqueeze(0)
     model.eval()
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     start_time = time.perf_counter()
     yHat = model(img.to(device))
     end_time = time.perf_counter()

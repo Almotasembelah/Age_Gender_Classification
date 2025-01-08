@@ -66,6 +66,7 @@ class FairFaceDataset(Dataset):
 
 #--------------------------Helper Functions--------------------------
 
+from trochvision import transforms
 def normalize(dataloader):
     mean = torch.tensor([0, 0, 0], dtype=torch.float)
     std = torch.tensor([0, 0, 0], dtype=torch.float)

@@ -6,7 +6,7 @@ class FairFaceDataset(Dataset):
     This class is used to create a dataset for the FairFace dataset. 
     It can be used to create a dataset for multiple tasks or a single task.
     '''
-    def __init__(self, df, transform=None, root=root, gender=True, age=True, race=True):
+    def __init__(self, df, transform=None, root='/kaggle/input/fairface/FairFace/', gender=True, age=True, race=True):
         self.df = df
         self.transform = transform
         self.root = root

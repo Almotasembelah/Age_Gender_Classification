@@ -17,7 +17,8 @@ class Classifier(nn.Module):
         self.task = task
         self.fc_gender = nn.Sequential(nn.Linear(in_features, 512),
                                         nn.ReLU(),
-                                        nn.Linear(512, 1))  
+                                        nn.Linear(512, 1),
+                                        nn.Sigmoid())  
 
         self.fc_age = nn.Sequential(nn.Linear(in_features, 1024),    
                                     nn.ReLU(),

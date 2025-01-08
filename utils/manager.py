@@ -746,23 +746,23 @@ class ModelManagerV2(ModelManager):
                 if self.multi_task:
                     # Handle multi-task predictions
                     for i, pred in enumerate(outputs):
-                        if pred.size(1) > 2:  # Multi-class classification
-                            pred_labels = pred.argmax(dim=1).cpu().numpy()
-                        else:  # Binary classification
+                        if isinstance(self._loss_fn[i], nn.BCELoss) or isinstance(self._loss_fn[i], nn.BCEWithLogitsLoss):  # Binary classification
                             pred_labels = (pred > 0.5).float().cpu().numpy()
-    
+                        else:  # Multi-class classification
+                            pred_labels = pred.argmax(dim=1).cpu().numpy()
+
                         y_pred[i].extend(pred_labels)
                         y_true[i].extend(y[i].cpu().numpy())
                 else:
                     # Handle single-task predictions
-                    if outputs.size(1) > 2:  # Multi-class classification
-                        pred_labels = outputs.argmax(dim=1).cpu().numpy()
-                    else:  # Binary classification
+                    if isinstance(self._loss_fn, nn.BCELoss) or isinstance(self._loss_fn, nn.BCEWithLogitsLoss):
                         pred_labels = (outputs > 0.5).float().cpu().numpy()
-    
+                    else:  # Multi-class classification
+                        pred_labels = outputs.argmax(dim=1).cpu().numpy()
+
                     y_pred.extend(pred_labels)
                     y_true.extend(y.cpu().numpy())
-                    
+
                 del x, y
         # Restore the model to training mode
         self.model.train()

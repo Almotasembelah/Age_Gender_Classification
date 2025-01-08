@@ -1,5 +1,7 @@
 from torch.utils.data import Dataset
 from PIL import Image
+import torch
+import torch.nn.functional as F
 
 class FairFaceDataset(Dataset):
     '''

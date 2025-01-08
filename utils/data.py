@@ -2,6 +2,7 @@ from torch.utils.data import Dataset
 from PIL import Image
 import torch
 import torch.nn.functional as F
+import time
 
 class FairFaceDataset(Dataset):
     '''
@@ -134,6 +135,7 @@ def visualize(model, batch, max_num_filters=-1, device='cuda'):
     import matplotlib.pyplot as plt
     from matplotlib.figure import Figure
     import gc
+    import numpy as np
     
     # Visualize feature maps for a specific layer
     @torch.no_grad()

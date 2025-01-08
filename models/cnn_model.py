@@ -40,7 +40,7 @@ class ModelV1(nn.Module):
     def __init__(self, task=Task.ALL):
         super().__init__()
         self.conv5X5 = nn.Sequential(
-            nn.Conv2d(3, 64, 3, bias=False, padding=1, stride=1),  # Increased stride
+            nn.Conv2d(3, 64, 5, bias=False, padding=1),
             nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(2)

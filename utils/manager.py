@@ -39,6 +39,8 @@ class ModelManager:
             if device == 'cuda' and not torch.cuda.is_available():
                 print('cuda is not available. Device will be set to `cpu`')
                 self.device = 'cpu'
+            else:
+                self.device = device
 
         self.model = model
         self._optimizer = optimizer

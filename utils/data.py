@@ -262,3 +262,88 @@ def visualize(model, batch, max_num_filters=-1, device='cuda'):
     mode_selector = Dropdown(options=['Single Image', 'Entire Batch'], value='Single Image', description="Mode")
     
     interact(wrapper, layer_name=layer_names, filter_idx=filter_indices, image_idx=image_indices, mode=mode_selector)
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+def display_classified_images(model, loader, dataset, max_images=16):
+    """
+    Display images with their true and predicted labels. 
+    To change the batch, call the returned function again.
+    """
+    iter_loader = iter(loader)
+
+    def get_classes():
+        nonlocal iter_loader
+        try:
+            imgs, labels = next(iter_loader)
+        except StopIteration:
+            iter_loader = iter(loader)
+            imgs, labels = next(iter_loader)
+
+        imgs = imgs.to(device)
+        model.eval()
+        with torch.no_grad(): 
+            preds = model(imgs)
+        
+        preds = preds.detach().cpu()  
+        gen_pred = preds[:, 0]
+        age_pred = preds[:, 1:10]
+        race_pred = preds[:, 10:]
+
+        age_pred = F.softmax(age_pred, dim=1).argmax(dim=1)
+        race_pred = F.softmax(race_pred, dim=1).argmax(dim=1)
+        gen_pred = (gen_pred > 0.5).int()
+
+        classes = []
+        for i, (g_pred, a_pred, r_pred, g, a, r) in enumerate(zip(gen_pred, age_pred, race_pred,
+                                                                 labels[0], labels[1], labels[2])):
+            classes.append([imgs[i], g_pred.item(), a_pred.item(), r_pred.item(),
+                            g.int().item(), a.item(), r.item()])
+        return classes
+
+    def wrapper():
+        classes = get_classes()
+        n_images = min(len(classes), max_images)
+        n_rows = n_images // 4 if n_images % 4 == 0 else n_images // 4 + 1
+        fig = plt.figure(figsize=(12, 5 * n_rows))
+        axes = fig.subplots(n_rows, 4)
+
+        for i, ax in enumerate(axes.flatten() if isinstance(axes, np.ndarray) else [axes]):
+            if i < n_images:
+                img, g_pred, a_pred, r_pred, g_true, a_true, r_true = classes[i]
+
+                # Decode labels
+                g_pred_text = dataset.classes[0][g_pred]
+                g_true_text = dataset.classes[0][g_true]
+                a_pred_text = dataset.classes[1][a_pred]
+                a_true_text = dataset.classes[1][a_true]
+                r_pred_text = dataset.classes[2][r_pred]
+                r_true_text = dataset.classes[2][r_true]
+
+                # Determine colors and label formats
+                g_label = f"Gen: {g_true_text}" if g_pred == g_true else f"Gen: {g_true_text} (Pred: {g_pred_text})"
+                g_color = 'green' if g_pred == g_true else 'red'
+
+                a_label = f"Age: {a_true_text}" if a_pred == a_true else f"Age: {a_true_text} (Pred: {a_pred_text})"
+                a_color = 'green' if a_pred == a_true else 'red'
+
+                r_label = f"Race: {r_true_text}" if r_pred == r_true else f"Race: {r_true_text} (Pred: {r_pred_text})"
+                r_color = 'green' if r_pred == r_true else 'red'
+
+                # Display the image
+                ax.imshow(img.permute(1, 2, 0).detach().cpu().numpy())
+                ax.axis('off')
+
+                # Add true labels and incorrect predictions
+                ax.text(0.5, -0.2, g_label, fontsize=8, color=g_color, ha='center', va='top', transform=ax.transAxes)
+                ax.text(0.5, -0.3, a_label, fontsize=8, color=a_color, ha='center', va='top', transform=ax.transAxes)
+                ax.text(0.5, -0.4, r_label, fontsize=8, color=r_color, ha='center', va='top', transform=ax.transAxes)
+            else:
+                ax.axis('off')
+
+        plt.tight_layout()
+        plt.show()
+
+    return wrapper

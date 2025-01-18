@@ -584,7 +584,12 @@ class ModelManager:
 
 
 class ModelManagerV2(ModelManager):   
+    def __init__(self, model, optimizer, loss_fn, device=None, weighted_loss=False):
+        super().__init__(model, optimizer, loss_fn, device)
+        self.weighted_loss = weighted_loss
+        
     def _train_step_fn(self):
+        w_gen, w_age, w_race = 1.0, 1.0, 1.0
         def _step(x, y):
             self.model.train()
 
@@ -596,27 +601,29 @@ class ModelManagerV2(ModelManager):
             race_pred = y_pred[:, 10:]
             y_pred = [gen_pred, age_pred, race_pred]
             
-            loss = 0
-            if self.multi_task:
-                losses = []
-                for i, loss_fn in enumerate(self._loss_fn):
-                    y[i] = y[i].to(self.device)
-                    if isinstance(loss_fn, nn.BCELoss) or isinstance(loss_fn, nn.BCEWithLogitsLoss):
-                        temp_loss = loss_fn(y_pred[i], y[i])
-                    elif isinstance(self._loss_fn, nn.L1Loss) or isinstance(self._loss_fn, nn.MSELoss):
-                        temp_loss = self._loss_fn(y_pred, y)
-                    else:
-                        temp_loss = loss_fn(y_pred[i], y[i])
-                    losses.append(temp_loss.item())
-                    loss += temp_loss
+            losses = []
+            y_gen = y[0].to(self.device)
+            y_age = y[1].to(self.device)
+            y_race = y[2].to(self.device)
+            gen_loss = self._loss_fn[0](gen_pred, y_gen)
+            age_loss = self._loss_fn[1](age_pred, y_age)
+            race_loss = self._loss_fn[2](race_pred, y_race)
+
+            losses = [gen_loss.item(), age_loss.item(), race_loss.item()]
+
+            if self.weighted_loss:
+                w_gen = 1.0 / (gen_acc + 1e-6)
+                w_age = 1.0 / (age_acc + 1e-6)
+                w_race = 1.0 / (race_acc + 1e-6)
+
+                # Normalize weights
+                total_weight = w_gen + w_age + w_race
+                w_gen /= total_weight
+                w_age /= total_weight
+                w_race /= total_weight
+                loss = w_gen * gen_loss + w_age * age_loss + w_race * race_loss
             else:
-                y = y.to(self.device)
-                if isinstance(self._loss_fn, nn.BCELoss) or isinstance(self._loss_fn, nn.BCEWithLogitsLoss):
-                    loss = self._loss_fn(y_pred, y)
-                elif isinstance(self._loss_fn, nn.L1Loss) or isinstance(self._loss_fn, nn.MSELoss):
-                    loss = self._loss_fn(y_pred, y)
-                else:
-                    loss = self._loss_fn(y_pred, y)
+                loss = gen_loss + age_loss + race_loss
 
             loss.backward()
             self._optimizer.step()
@@ -628,10 +635,7 @@ class ModelManagerV2(ModelManager):
             acc = self._accuracy(x, y)
 
             del x, y, y_pred
-            if self.multi_task:
-                return loss.item(), *losses, *acc
-            else:
-                return loss.item(), acc
+            return loss.item(), *losses, *acc
         return _step
 
     def _val_step_fn(self):

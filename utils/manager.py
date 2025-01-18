@@ -587,7 +587,7 @@ class ModelManagerV2(ModelManager):
     def __init__(self, model, optimizer, loss_fn, device=None, weighted_loss=False):
         super().__init__(model, optimizer, loss_fn, device)
         self.weighted_loss = weighted_loss
-        
+
     def _train_step_fn(self):
         w_gen, w_age, w_race = 1.0, 1.0, 1.0
         def _step(x, y):
@@ -611,10 +611,12 @@ class ModelManagerV2(ModelManager):
 
             losses = [gen_loss.item(), age_loss.item(), race_loss.item()]
 
+            acc = self._accuracy(x, y)
+            
             if self.weighted_loss:
-                w_gen = 1.0 / (gen_acc + 1e-6)
-                w_age = 1.0 / (age_acc + 1e-6)
-                w_race = 1.0 / (race_acc + 1e-6)
+                w_gen = 1.0 / (acc[0] + 1e-6)
+                w_age = 1.0 / (acc[1] + 1e-6)
+                w_race = 1.0 / (acc[2] + 1e-6)
 
                 # Normalize weights
                 total_weight = w_gen + w_age + w_race
@@ -632,7 +634,6 @@ class ModelManagerV2(ModelManager):
             if self._BATCH_SCHEDULER:
                 self._lr_scheduler.step()
 
-            acc = self._accuracy(x, y)
 
             del x, y, y_pred
             return loss.item(), *losses, *acc

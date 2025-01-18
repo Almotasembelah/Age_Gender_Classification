@@ -267,7 +267,7 @@ def visualize(model, batch, max_num_filters=-1, device='cuda'):
 import matplotlib.pyplot as plt
 import numpy as np
 
-def display_classified_images(model, loader, dataset, max_images=16):
+def display_classified_images(model, loader, dataset, max_images=16, device='cuda'):
     """
     Display images with their true and predicted labels. 
     To change the batch, call the returned function again.

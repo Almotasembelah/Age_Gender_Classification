@@ -474,7 +474,7 @@ def grad_cam(model, image, target_class, target_layer):
     model.eval()
     activations = {}
     gradients = {}
-
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     # Hook for capturing activations
     def forward_hook(module, input, output):
         activations['value'] = output

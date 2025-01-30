@@ -453,7 +453,7 @@ def create_misclassification_viewer(model, dataloader, class_mappings, device='c
                     ax.axis('off')
                 else:
                     ax.set_visible(False)  # Hide empty subplots
-
+            plt.set_title(f"True Label: {true_label}, Predicted Label: {predicted_label}")
             plt.tight_layout()
             plt.show()
 

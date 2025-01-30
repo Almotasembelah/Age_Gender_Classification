@@ -536,7 +536,7 @@ def upsampleHeatmap(map, img):
     map = np.uint8(map*0.6 + img*0.4)
     return map
 
-def display_image_and_gradcam(model, image, target_layer):
+def display_image_and_gradcam(model, image, target_layer, val_dataset):
     """
     Display the original image and Grad-CAM heatmaps for each predicted class.
     Args:
@@ -578,7 +578,7 @@ def display_image_and_gradcam(model, image, target_layer):
     plt.tight_layout()
     plt.show()
 
-def display_images_and_gradcam_v1(model, images, target_layer):
+def display_images_and_gradcam_v1(model, images, target_layer, val_dataset):
     """
     Display the original images and Grad-CAM heatmaps for each predicted class.
     Args:
